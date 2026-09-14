@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>GV-Cloud Monitor & Smart Report</title>
+    <style>
+        body { margin: 0; background: #0f1117; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; color: white; }
+        .toolbar { background: #1a1d2e; padding: 15px; display: flex; justify-content: center; border-bottom: 2px solid #2a2f45; gap: 20px; align-items: center; }
+        .mail-btn { padding: 10px 25px; border-radius: 4px; cursor: pointer; font-weight: bold; border: none; transition: 0.2s; }
+        .copy-btn { background: #28a745; color: white; }
+        .open-btn { background: #007bff; color: white; }
+        .copy-btn:hover { background: #218838; }
+        .open-btn:hover { background: #0069d9; }
+        .time-hint { color: #aaa; font-size: 14px; }
+        .container { display: flex; flex: 1; overflow: hidden; }
+        .monitor-pane { flex: 1; display: flex; flex-direction: column; border-right: 2px solid #2a2f45; }
+        .label { background: #1a1d2e; color: #4d8eff; padding: 8px; text-align: center; font-weight: bold; border-bottom: 1px solid #2a2f45; }
+        iframe { width: 100%; flex: 1; border: none; background: white; }
+        #report-area { position: absolute; left: -9999px; top: 0; }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="time-hint" id="current-time-display">載入中...</div>
+    <button onclick="generateAndCopyReport()" class="mail-btn copy-btn">📋 1. 自動產出並複製報表</button>
+    <button onclick="openThunderbird()" class="mail-btn open-btn">⚡ 2. 開氣 Thunderbird</button>
+</div>
+
+<div class="container">
+    <div class="monitor-pane">
+        <div class="label">PRODUCTION (PROD)</div>
+        <iframe src="https://status.gvaicloud.com/"></iframe>
+    </div>
+    <div class="monitor-pane">
+        <div class="label">STAGING (STAGE)</div>
+        <iframe src="https://status-stage.gvaicloud.com/"></iframe>
+    </div>
+</div>
+
+<div id="report-area"></div>
+
+<script>
+    // 預設全域變數
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDate = now.getDate();
+    
+    // 將週日(0)和週六(6)的數值做校正，確保週一到週五的比較邏輯正確
+    let currentDay = now.getDay(); 
+    if (currentDay === 0) currentDay = 7; // 週日變成 7
+    if (currentDay === 6) currentDay = 6; // 週六維持 6
+
+    const currentHour = now.getHours();
+
+    // 顯示當前時間提示
+    document.getElementById('current-time-display').innerText = `目前系統時間：${currentYear}/${currentMonth}/${currentDate} ${String(currentHour).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    // 1. 計算本週一到週五的日期數字 (MM/DD)
+    function getWeekDays() {
+        const dates = {};
+        const daysName = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        
+        // 算出本週一的 Date 物件 (如果今天是週日，往前推 6 天就是週一)
+        const mondayOffset = currentDay === 7 ? -6 : 1 - currentDay; 
+        
+        for(let i = 0; i < 5; i++) {
+            const tempDate = new Date(now);
+            tempDate.setDate(now.getDate() + mondayOffset + i);
+            const m = tempDate.getMonth() + 1;
+            const d = tempDate.getDate();
+            dates[i + 1] = `${m}/${d}(${daysName[i]})`; // 鍵值 1=Mon, 2=Tue...
+        }
+        return dates;
+    }
+
+    const weekDays = getWeekDays();
+
+    // 2. 核心修正：聰明判斷歷史與當下狀態
+    function getStatus(targetDay, timeType) {
+        // 情境 A：如果是本週「過去的幾天」，一律自動填入 PASS
+        if (currentDay > targetDay) {
+            return timeType === 'AM' ? 'PASS(11:00)' : 'PASS(19:00)';
+        }
+
+        // 情境 B：如果是「今天」，根據當下時間判斷
+        if (currentDay === targetDay) {
+            if (timeType === 'AM' && currentHour >= 11) {
+                return 'PASS(11:00)';
+            }
+            if (timeType === 'PM' && currentHour >= 19) {
+                return 'PASS(19:00)';
+            }
+        }
+
+        // 情境 C：未來的天數，保持空白
+        return '';
+    }
+
+    // 3. 核心功能：動態組裝 HTML 表格並複製
+    async function generateAndCopyReport() {
+        const reportArea = document.getElementById('report-area');
+        
+        let html = `
+            <p style="font-family: Verdana; font-size: 11pt; color: black;">Dear James</p>
+            <p style="font-family: Verdana; font-size: 11pt; color: black;">GV-Cloud 每日登入資訊如下</p>
+            
+            <table border="1" cellspacing="0" cellpadding="5" style="border-collapse: collapse; font-family: Verdana, sans-serif; width: 850px; border: 1px solid black; color: black;">
+                <tr style="background-color: silver; text-align: center; border: 1px solid black;">
+                    <td colspan="8" style="border: 1px solid black;"><b>本周 GV-Cloud 每日登入</b></td>
+                </tr>
+                <tr style="background-color: silver; text-align: center; font-weight: bold; border: 1px solid black;">
+                    <td style="border: 1px solid black;">SW Version</td>
+                    <td style="border: 1px solid black;">時間</td>
+                    <td style="border: 1px solid black;">${weekDays[1]}</td>
+                    <td style="border: 1px solid black;">${weekDays[2]}</td>
+                    <td style="border: 1px solid black;">${weekDays[3]}</td>
+                    <td style="border: 1px solid black;">${weekDays[4]}</td>
+                    <td style="border: 1px solid black;">${weekDays[5]}</td>
+                    <td style="border: 1px solid black;">Note</td>
+                </tr>
+                <tr style="border: 1px solid black;">
+                    <td rowspan="2" align="center" style="border: 1px solid black;"><b>GV-Cloud V1.7.0</b><br>(Released)</td>
+                    <td align="center" style="color: blue; border: 1px solid black;"><b>上午</b></td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(1, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(2, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(3, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(4, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(5, 'AM')}</td>
+                    <td rowspan="2" style="border: 1px solid black;"><a href="https://status.gvaicloud.com/">https://status.gvaicloud.com/</a></td>
+                </tr>
+                <tr style="height: 30px; border: 1px solid black;">
+                    <td align="center" style="color: blue; border: 1px solid black;"><b>下午</b></td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(1, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(2, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(3, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(4, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(5, 'PM')}</td>
+                </tr>
+                <tr style="border: 1px solid black;">
+                    <td rowspan="2" align="center" style="border: 1px solid black;"><b>GV-Cloud V1.8.0</b><br>(Stage)</td>
+                    <td align="center" style="color: blue; border: 1px solid black;"><b>上午</b></td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(1, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(2, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(3, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(4, 'AM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(5, 'AM')}</td>
+                    <td rowspan="2" style="border: 1px solid black;"><a href="https://status-stage.gvaicloud.com/">https://status-stage.gvaicloud.com/</a></td>
+                </tr>
+                <tr style="height: 30px; border: 1px solid black;">
+                    <td align="center" style="color: blue; border: 1px solid black;"><b>下午</b></td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(1, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(2, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(3, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(4, 'PM')}</td>
+                    <td align="center" style="color: blue; border: 1px solid black; font-weight: bold;">${getStatus(5, 'PM')}</td>
+                </tr>
+            </table>
+        `;
+
+        reportArea.innerHTML = html;
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const data = [new ClipboardItem({ 'text/html': blob })];
+
+        try {
+            await navigator.clipboard.write(data);
+            alert(`✅ 智慧報表已複製！\n\n歷史天數與今日達成欄位皆已自動補全 PASS。`);
+        } catch (err) {
+            alert("複製失敗，請重試。");
+        }
+    }
+
+    function openThunderbird() {
+        const dateStr = `${currentYear}/${currentMonth}/${currentDate}`;
+        const to = "jameshsiao@geovision.com.tw";
+        const cc = "kazami@geovision.com.tw,Ken@geovision.com.tw,louis.wang@geovision.com.tw";
+        const subject = encodeURIComponent(dateStr + " GV-Cloud每日登入");
+        window.location.href = "mailto:" + to + "?cc=" + cc + "&subject=" + subject;
+    }
+</script>
+
+</body>
+</html>

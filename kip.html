@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug 系統網頁原始碼自動彙整工具 (狀態斑馬版)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        p { font-size: 14px; color: #666; line-height: 1.6; }
+        textarea {
+            width: 100%;
+            height: 250px;
+            padding: 12px;
+            border: 1px solid #ccd1d9;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: vertical;
+            background-color: #fafafa;
+        }
+        .btn-group { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #2980b9; }
+        button.secondary { background-color: #2ecc71; }
+        button.secondary:hover { background-color: #27ae60; }
+        button.clear { background-color: #e74c3c; }
+        button.clear:hover { background-color: #c0392b; }
+        button.info { background-color: #f39c12; }
+        button.info:hover { background-color: #d35400; }
+        
+        .table-container {
+            margin-top: 25px;
+            overflow-x: auto;
+            max-height: 650px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 14px 15px; border-bottom: 1px solid #e0e0e0; text-align: left; vertical-align: top; }
+        th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #ddd; }
+        
+        tbody tr { cursor: pointer; transition: background-color 0.15s; }
+        tbody tr:hover { background-color: #f1f8ff; }
+        
+        /* 點擊驗證過後的整列底色 */
+        tbody tr.verified {
+            background-color: #e8f5e9 !important; 
+            color: #1b5e20;
+        }
+        .status-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-right: 10px;
+            background-color: #e0e0e0;
+            color: #666;
+        }
+        tr.verified .status-badge {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        /* 🟢 狀態標籤基礎樣式與專屬色彩 */
+        .rd-status-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            border: 1px solid #ddd;
+            background-color: #f5f5f5;
+            color: #666;
+        }
+        /* Fixed待FAE驗證 */
+        .tag-fixed {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-color: #c8e6c9;
+        }
+        /* RD轉Spec待FAE確認 */
+        .tag-spec {
+            background-color: #fffde7;
+            color: #f57f17;
+            border-color: #fff9c4;
+        }
+        /* 下一版再修正 */
+        .tag-next-version {
+            background-color: #fff3e0;
+            color: #e65100;
+            border-color: #ffe0b2;
+        }
+        /* 未修正 */
+        .tag-not-fixed {
+            background-color: #ffebee;
+            color: #c62828;
+            border-color: #ffcdd2;
+        }
+
+        .count-badge {
+            background: #e1f5fe;
+            color: #0288d1;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .tip-box {
+            background-color: #e8f4fd;
+            border-left: 4px solid #29b6f6;
+            padding: 12px 15px;
+            font-size: 13px;
+            color: #0288d1;
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Excel Bug 資料自動彙整工具 (彩色狀態標籤版)</h1>
+    
+    <div id="inputSection">
+        <p>💡 <strong>使用方法：</strong>按 <code>F12</code> 複製網頁表格的 HTML 元素代碼，貼在下方即可自動萃取並分類標籤顏色：</p>
+        <textarea id="rawInput" placeholder="請在此處 Ctrl+V 貼上網頁 HTML 元素代碼..."></textarea>
+        <div class="btn-group">
+            <button onclick="processHTMLStructure()">立即自動整理</button>
+            <button class="clear" onclick="clearAll()">清除內容</button>
+        </div>
+    </div>
+
+    <div id="resultSection" style="display:none;">
+        <div class="tip-box">
+            <span>💡 <strong>操作提示：</strong>點擊任何橫列（Row）即可切換「✓ 已驗證」標記，並與上方輸入區自動分流。</span>
+            <button class="info" style="padding: 6px 12px; font-size: 12px;" onclick="showInputSection()">重新輸入 / 修改代碼</button>
+        </div>
+
+        <div class="btn-group" style="margin-top: 20px;">
+            <button class="secondary" id="exportBtn" onclick="exportCSV()">導出乾淨 CSV (Excel專用)</button>
+        </div>
+
+        <h2>整理結果 <span id="dataCount" class="count-badge">0 筆資料</span></h2>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Bug No.</th>
+                        <th style="width: 55%;">Contents</th>
+                        <th style="width: 20%;">RD & Pre-Test status</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let extractedData = [];
+
+    function processHTMLStructure() {
+        const input = document.getElementById('rawInput').value;
+        const resultBody = document.getElementById('resultBody');
+        const resultSection = document.getElementById('resultSection');
+        const inputSection = document.getElementById('inputSection');
+        const dataCount = document.getElementById('dataCount');
+        
+        resultBody.innerHTML = '';
+        extractedData = [];
+
+        if (!input.trim()) {
+            alert('請先貼入網頁 HTML 代碼！');
+            return;
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(input, 'text/html');
+        const rows = doc.querySelectorAll('tr');
+        
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 11) {
+                let contentText = cells[5].innerHTML; 
+                let bugNoText = cells[6].textContent.trim(); 
+                let rdStatusText = cells[10].textContent.trim(); 
+
+                const bugNoRegex = /[a-zA-Z0-9._-]+-\d{4}-\d{2}-\d{2}-\d{2}/;
+                if (bugNoRegex.test(bugNoText)) {
+                    
+                    let tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = contentText.replace(/<br\s*\/?>/gi, '\n');
+                    
+                    const links = tempDiv.querySelectorAll('a');
+                    links.forEach(l => l.remove());
+
+                    let finalContent = tempDiv.textContent.trim();
+
+                    extractedData.push({
+                        bugNo: bugNoText.match(bugNoRegex)[0],
+                        contents: finalContent,
+                        rdStatus: rdStatusText || "無狀態"
+                    });
+                }
+            }
+        });
+
+        if (extractedData.length === 0) {
+            fallbackTextParser(input);
+        }
+
+        // 渲染畫面
+        if (extractedData.length > 0) {
+            extractedData.forEach(item => {
+                const tr = document.createElement('tr');
+                
+                tr.onclick = function() {
+                    this.classList.toggle('verified');
+                    const badge = this.querySelector('.status-badge');
+                    if (this.classList.contains('verified')) {
+                        badge.textContent = '✓ 已驗證';
+                    } else {
+                        badge.textContent = '未驗證';
+                    }
+                };
+
+                // 根據狀態文字動態給予對應的 CSS 樣式名稱
+                let colorClass = "";
+                if (item.rdStatus.includes("Fixed待FAE驗證")) {
+                    colorClass = "tag-fixed";
+                } else if (item.rdStatus.includes("RD轉Spec待FAE確認")) {
+                    colorClass = "tag-spec";
+                } else if (item.rdStatus.includes("下一版再修正")) {
+                    colorClass = "tag-next-version";
+                } else if (item.rdStatus.includes("未修正")) {
+                    colorClass = "tag-not-fixed";
+                }
+
+                tr.innerHTML = `
+                    <td><span class="status-badge">未驗證</span><strong>${item.bugNo}</strong></td>
+                    <td style="white-space:pre-wrap;">${escapeHtml(item.contents)}</td>
+                    <td><span class="rd-status-tag ${colorClass}">${escapeHtml(item.rdStatus)}</span></td>
+                `;
+                resultBody.appendChild(tr);
+            });
+
+            inputSection.style.display = 'none';
+            resultSection.style.display = 'block';
+            dataCount.textContent = `${extractedData.length} 筆資料`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            alert('未能識別出任何 Bug 資料，請確保貼入完整的 HTML 區塊。');
+        }
+    }
+
+    function fallbackTextParser(input) {
+        const bugNoRegex = /[a-zA-Z0-9._-]+-\d{4}-\d{2}-\d{2}-\d{2}/g;
+        let matches = [];
+        let match;
+        while ((match = bugNoRegex.exec(input)) !== null) {
+            matches.push({ bugNo: match[0], index: match.index, endIndex: bugNoRegex.lastIndex });
+        }
+        for (let i = 0; i < matches.length; i++) {
+            let currentMatch = matches[i];
+            let block = (i === 0) ? input.substring(0, currentMatch.index) : input.substring(matches[i-1].endIndex, currentMatch.index);
+            if (i === matches.length - 1 && input.substring(currentMatch.endIndex).trim()) {
+                let txt = cleanText(input.substring(currentMatch.endIndex));
+                if (txt) { extractedData.push({ bugNo: currentMatch.bugNo, contents: txt, rdStatus: "未知" }); continue; }
+            }
+            let cleanChunk = cleanText(block);
+            if (i > 0 && cleanChunk) extractedData.push({ bugNo: matches[i-1].bugNo, contents: cleanChunk, rdStatus: "未知" });
+        }
+    }
+
+    function showInputSection() {
+        document.getElementById('inputSection').style.display = 'block';
+        document.getElementById('resultSection').style.display = 'none';
+    }
+
+    function cleanText(text) {
+        if (!text) return "";
+        return text.replace(/<[^>]*>/g, '').replace(/contents/gi, '').replace(/Bug No\./gi, '').trim();
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function exportCSV() {
+        if (extractedData.length === 0) return;
+        let csvContent = "\uFEFFBug No.,contents,RD_Status\r\n";
+        extractedData.forEach(item => {
+            let escapedContent = item.contents.replace(/"/g, '""');
+            let escapedStatus = item.rdStatus.replace(/"/g, '""');
+            csvContent += `"${item.bugNo}","${escapedContent}","${escapedStatus}"\r\n`;
+        });
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Bug_Report_Colored_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
+
+    function clearAll() {
+        document.getElementById('rawInput').value = '';
+        document.getElementById('resultBody').innerHTML = '';
+        document.getElementById('resultSection').style.display = 'none';
+        extractedData = [];
+    }
+</script>
+</body>
+</html>

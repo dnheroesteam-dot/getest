@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug 系統網頁原始碼自動彙整工具 (Class 欄位進階版)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1250px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        p { font-size: 14px; color: #666; line-height: 1.6; }
+        textarea {
+            width: 100%;
+            height: 250px;
+            padding: 12px;
+            border: 1px solid #ccd1d9;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: vertical;
+            background-color: #fafafa;
+        }
+        .btn-group { margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        button:hover { background-color: #2980b9; }
+        button.secondary { background-color: #2ecc71; }
+        button.secondary:hover { background-color: #27ae60; }
+        button.clear { background-color: #e74c3c; }
+        button.clear:hover { background-color: #c0392b; }
+        button.info { background-color: #f39c12; }
+        button.info:hover { background-color: #d35400; }
+        
+        /* 精簡模式按鈕的特別樣式 */
+        button.compact-btn {
+            background-color: #9b59b6;
+        }
+        button.compact-btn:hover {
+            background-color: #8e44ad;
+        }
+        button.compact-active {
+            background-color: #e67e22 !important;
+        }
+
+        /* 一鍵複製 Excel 按鈕樣式 */
+        button.excel-copy-btn {
+            background-color: #1d6f42; /* Excel 經典綠色 */
+        }
+        button.excel-copy-btn:hover {
+            background-color: #155230;
+        }
+                    
+        .table-container {
+            margin-top: 25px;
+            overflow-x: auto;
+            max-height: 650px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 14px 15px; border-bottom: 1px solid #e0e0e0; text-align: left; vertical-align: top; }
+        th { background-color: #f8f9fa; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #ddd; }
+                    
+        tbody tr { cursor: pointer; transition: background-color 0.15s; }
+        tbody tr:hover { background-color: #f1f8ff; }
+                    
+        tbody tr.verified {
+            background-color: #e8f5e9 !important; 
+            color: #1b5e20;
+        }
+        .status-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-right: 10px;
+            background-color: #e0e0e0;
+            color: #666;
+            transition: all 0.2s ease;
+        }
+        tr.verified .status-badge {
+            background-color: #4caf50;
+            color: white;
+        }
+
+        .rd-status-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            border: 1px solid #ddd;
+            background-color: #f5f5f5;
+            color: #666;
+        }
+        .tag-fixed { background-color: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+        .tag-spec { background-color: #fffde7; color: #f57f17; border-color: #fff9c4; }
+        .tag-next-version { background-color: #fff3e0; color: #e65100; border-color: #ffe0b2; }
+        .tag-not-fixed { background-color: #ffebee; color: #c62828; border-color: #ffcdd2; }
+
+        .count-badge {
+            background: #e1f5fe;
+            color: #0288d1;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .tip-box {
+            background-color: #e8f4fd;
+            border-left: 4px solid #29b6f6;
+            padding: 12px 15px;
+            font-size: 13px;
+            color: #0288d1;
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .text-more {
+            color: #95a5a6;
+            font-size: 12px;
+            font-style: italic;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Excel Bug 資料自動彙整工具 (智慧動態欄位-帶Class版)</h1>
+    
+    <div id="inputSection">
+        <p>💡 <strong>使用方法：</strong>按 <code>F12</code> 複製網頁表格的 HTML 元素代碼（包含 <code>&lt;table&gt;</code> 或是多個 <code>&lt;tr&gt;</code>），貼在下方即可自動精確解析欄位：</p>
+        <textarea id="rawInput" placeholder="請在此處 Ctrl+V 貼上網頁 HTML 元素代碼..."></textarea>
+        <div class="btn-group">
+            <button onclick="processHTMLStructure()">立即自動整理</button>
+            <button class="clear" onclick="clearAll()">清除內容</button>
+        </div>
+    </div>
+
+    <div id="resultSection" style="display:none;">
+        <div class="tip-box">
+            <span>💡 <strong>操作提示：</strong>點擊任何橫列（Row）即可切換「✓ 已驗證」標記，匯出 CSV 或複製時會同步更新狀態。</span>
+            <button class="info" style="padding: 6px 12px; font-size: 12px;" onclick="showInputSection()">重新輸入 / 修改代碼</button>
+        </div>
+
+        <div class="btn-group" style="margin-top: 20px;">
+            <button class="secondary" id="exportBtn" onclick="exportCSV()">導出乾淨 CSV (Excel專用)</button>
+            <button class="compact-btn" id="compactToggleBtn" onclick="toggleCompactMode()">⚡ 一鍵精簡 (只留第一行)</button>
+            <!-- 複製按鈕 -->
+            <button class="excel-copy-btn" onclick="copyForExcel()">📋 複製精簡版 (貼到 Excel 自動分 A、B、C 欄)</button>
+        </div>
+
+        <h2>整理結果 <span id="dataCount" class="count-badge">0 筆資料</span></h2>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Class</th>
+                        <th style="width: 20%;">Bug No.</th>
+                        <th style="width: 45%;">Contents</th>
+                        <th style="width: 20%;">RD & Pre-Test status</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let extractedData = [];
+    let isCompactMode = false; // 控制精簡狀態
+
+    function processHTMLStructure() {
+        const input = document.getElementById('rawInput').value;
+        const resultBody = document.getElementById('resultBody');
+        const resultSection = document.getElementById('resultSection');
+        const inputSection = document.getElementById('inputSection');
+        const dataCount = document.getElementById('dataCount');
+        
+        resultBody.innerHTML = '';
+        extractedData = [];
+        isCompactMode = false; // 每次重新解析時，預設不開啟精簡模式
+        
+        const compactBtn = document.getElementById('compactToggleBtn');
+        compactBtn.classList.remove('compact-active');
+        compactBtn.textContent = '⚡ 一鍵精簡 (只留第一行)';
+
+        if (!input.trim()) {
+            alert('請先貼入網頁 HTML 代碼！');
+            return;
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(input, 'text/html');
+        const rows = [...doc.querySelectorAll("tr")];
+
+        let col = {
+            class: -1,
+            contents: -1,
+            bugNo: -1,
+            rdStatus: -1
+        };
+
+        // --- 核心：智慧尋找 Header 欄位索引值 ---
+        for (const row of rows) {
+            const headers = [...row.querySelectorAll("td")];
+
+            headers.forEach((td, index) => {
+                const text = td.textContent.trim().toLowerCase();
+
+                if (text === "class")
+                    col.class = index;
+
+                if (text === "contents")
+                    col.contents = index;
+
+                if (text.includes("bug no"))
+                    col.bugNo = index;
+
+                if (text.includes("rd") && text.includes("status"))
+                    col.rdStatus = index;
+            });
+
+            if (col.contents !== -1 && col.bugNo !== -1)
+                break;
+        }
+
+        if (col.contents === -1 || col.bugNo === -1) {
+            alert("找不到 Contents 或 Bug No 欄位，請確認 HTML 結構是否包含表頭。");
+            return;
+        }
+
+        // --- 開始解析資料 ---
+        rows.forEach(row => {
+            const cells = row.querySelectorAll("td");
+
+            // 確保該行儲存格數量足夠
+            if (cells.length <= Math.max(col.contents, col.bugNo))
+                return;
+
+            const bugNo = cells[col.bugNo].textContent.trim();
+
+            if (!bugNo)
+                return;
+
+            // 過濾 Header 自己
+            if (bugNo.toLowerCase().includes("bug no"))
+                return;
+
+            // 再加一層防護：如果該欄位看起來不像是合法的序號（不符合 bugNo 格式），通常是雜列，予以跳過
+            const bugNoRegex = /[a-zA-Z0-9._-]+-\d{4}-\d{2}-\d{2}-\d{2}/;
+            if (!bugNoRegex.test(bugNo))
+                return;
+
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = cells[col.contents].innerHTML.replace(/<br\s*\/?>/gi, "\n");
+
+            // 移除圖片與連結 (例如 a 標籤與內建的複製圖示、縮圖等)
+            tempDiv.querySelectorAll("a,img").forEach(e => e.remove());
+
+            // 抓取 Class (若沒抓到則標記為 "無")
+            const rawClass = col.class >= 0 ? cells[col.class].textContent.trim() : "無";
+
+            // 抓取狀態
+            const rawRDStatus = col.rdStatus >= 0 ? cells[col.rdStatus].textContent.trim() : "未知";
+
+            extractedData.push({
+                class: rawClass || "無",
+                bugNo: bugNo.match(bugNoRegex)[0], // 確保導出格式最乾淨
+                contents: tempDiv.textContent.replace(/\u00a0/g, ' ').trim(), // 防止 &nbsp; 轉出特殊空白字元
+                rdStatus: rawRDStatus || "無狀態",
+                verified: false
+            });
+        });
+
+        // --- 渲染畫面 ---
+        if (extractedData.length > 0) {
+            renderTable();
+            inputSection.style.display = 'none';
+            resultSection.style.display = 'block';
+            dataCount.textContent = `${extractedData.length} 筆資料`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            alert('未能識別出符合格式的 Bug 資料，請確保貼入的代碼完整。');
+        }
+    }
+
+    // --- 渲染 Table 資料 ---
+    function renderTable() {
+        const resultBody = document.getElementById('resultBody');
+        resultBody.innerHTML = '';
+
+        extractedData.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-index', index);
+            if (item.verified) tr.classList.add('verified');
+            
+            tr.onclick = function() {
+                const idx = this.getAttribute('data-index');
+                const isVerified = this.classList.toggle('verified');
+                
+                extractedData[idx].verified = isVerified;
+                
+                const badge = this.querySelector('.status-badge');
+                badge.textContent = isVerified ? '✓ 已驗證' : '未驗證';
+            };
+
+            // 分類狀態顏色
+            let colorClass = "";
+            if (item.rdStatus.includes("Fixed待FAE驗證") || item.rdStatus.includes("Fixed")) {
+                colorClass = "tag-fixed";
+            } else if (item.rdStatus.includes("RD轉Spec待FAE確認") || item.rdStatus.includes("Spec")) {
+                colorClass = "tag-spec";
+            } else if (item.rdStatus.includes("下一版再修正")) {
+                colorClass = "tag-next-version";
+            } else if (item.rdStatus.includes("未修正")) {
+                colorClass = "tag-not-fixed";
+            }
+
+            // 處理內容顯示 (精簡模式邏輯)
+            let displayContents = item.contents;
+            if (isCompactMode) {
+                const lines = item.contents.split('\n');
+                if (lines.length > 1) {
+                    displayContents = lines[0] + ' <span class="text-more">... (略)</span>';
+                }
+            }
+
+            tr.innerHTML = `
+                <td><strong>${escapeHtml(item.class)}</strong></td>
+                <td><span class="status-badge">${item.verified ? '✓ 已驗證' : '未驗證'}</span><strong>${item.bugNo}</strong></td>
+                <td style="white-space:pre-wrap;">${isCompactMode ? displayContents : escapeHtml(displayContents)}</td>
+                <td><span class="rd-status-tag ${colorClass}">${escapeHtml(item.rdStatus)}</span></td>
+            `;
+            resultBody.appendChild(tr);
+        });
+    }
+
+    // --- 切換精簡/完整模式 ---
+    function toggleCompactMode() {
+        if (extractedData.length === 0) return;
+        
+        isCompactMode = !isCompactMode;
+        const compactBtn = document.getElementById('compactToggleBtn');
+
+        if (isCompactMode) {
+            compactBtn.classList.add('compact-active');
+            compactBtn.textContent = '🔄 還原完整內容';
+        } else {
+            compactBtn.classList.remove('compact-active');
+            compactBtn.textContent = '⚡ 一鍵精簡 (只留第一行)';
+        }
+
+        renderTable();
+    }
+
+    // --- 複製為貼到 Excel 自動換行與分欄的格式 (帶有 Class 欄位版) ---
+    function copyForExcel() {
+        if (extractedData.length === 0) {
+            alert("目前沒有任何解析出來的資料可供複製！");
+            return;
+        }
+
+        let copyText = "";
+
+        extractedData.forEach(item => {
+            // 欄位 A：Class
+            const cellA = item.class;
+
+            // 欄位 B：Bug No.
+            const cellB = item.bugNo;
+
+            // 欄位 C：Contents 的第一行（不含重複的 Bug No）
+            const firstLineOfContent = (item.contents.split('\n')[0] || "").trim();
+            const escapedContent = firstLineOfContent.replace(/"/g, '""');
+            
+            // 欄位 C 包上雙引號，確保特殊字元不會干擾換行
+            const cellC = `"${escapedContent}"`;
+
+            // 用 \t (Tab) 進行分欄 [A 欄] \t [B 欄] \t [C 欄] 
+            // 用 \r\n 進行換行，直接對齊 A1, B1, C1 → A2, B2, C2...
+            copyText += `${cellA}\t${cellB}\t${cellC}\r\n`;
+        });
+
+        // 寫入剪貼簿
+        navigator.clipboard.writeText(copyText)
+            .then(() => {
+                alert(`已成功複製 ${extractedData.length} 筆資料！\n請至 Excel 選擇「A1 儲存格」並貼上（Ctrl+V），資料就會完美分入 A (Class)、B (Bug No.)、C (Contents) 三個欄位囉！`);
+            })
+            .catch(err => {
+                console.error("複製失敗: ", err);
+                alert("瀏覽器不支援此一鍵複製功能，請手動匯出 CSV。");
+            });
+    }
+
+    function showInputSection() {
+        document.getElementById('inputSection').style.display = 'block';
+        document.getElementById('resultSection').style.display = 'none';
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function exportCSV() {
+        if (extractedData.length === 0) return;
+        
+        // CSV 表頭也新增 Class 欄位
+        let csvContent = "\uFEFFClass,Bug No.,contents,RD_Status,Verify_Status\r\n";
+        
+        extractedData.forEach(item => {
+            let escapedClass = item.class.replace(/"/g, '""');
+            let escapedContent = item.contents.replace(/"/g, '""');
+            let escapedStatus = item.rdStatus.replace(/"/g, '""');
+            let verifyText = item.verified ? "已驗證" : "未驗證";
+            
+            csvContent += `"${escapedClass}","${item.bugNo}","${escapedContent}","${escapedStatus}","${verifyText}"\r\n`;
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Bug_Report_Smart_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
+
+    function clearAll() {
+        document.getElementById('rawInput').value = '';
+        document.getElementById('resultBody').innerHTML = '';
+        document.getElementById('resultSection').style.display = 'none';
+        extractedData = [];
+    }
+</script>
+</body>
+</html>
