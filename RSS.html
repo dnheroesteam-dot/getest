@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Cloud Storage Health Status Monitor</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #2c3e50;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        .main-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a252c;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 12px;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 28px;
+            margin-bottom: 16px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .provider-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            margin-right: 10px;
+        }
+        .tag-wasabi { background-color: #00b359; }
+        .tag-aws { background-color: #ff9900; }
+        
+        .card {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            padding: 20px;
+            margin-bottom: 16px;
+            border-left: 5px solid #ccc;
+        }
+        .card.in-progress { border-left-color: #e67e22; }
+        .card.completed { border-left-color: #2ecc71; }
+        .card.resolved { border-left-color: #3498db; }
+        .card.normal { border-left-color: #2ecc71; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+            text-decoration: none;
+        }
+        .title:hover { text-decoration: underline; }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+        }
+        .bg-in-progress { background-color: #e67e22; }
+        .bg-completed { background-color: #2ecc71; }
+        .bg-resolved { background-color: #3498db; }
+        .bg-normal { background-color: #2ecc71; }
+
+        .meta-info {
+            font-size: 13px;
+            color: #4b5563;
+            margin-bottom: 8px;
+            font-weight: 600;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .bucket-code {
+            background: #f3f4f6;
+            color: #111827;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 12px;
+        }
+        .date {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+        .content {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #374151;
+        }
+        .content p { margin: 6px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-title">Multi-Cloud Storage Health Status Dashboard</div>
+        <div class="subtitle">整合 Wasabi 與 AWS 特定儲存桶與站點之即時與歷史監控告警</div>
+
+        <!-- WASABI SECTION -->
+        <div class="section-header">
+            <span class="provider-tag tag-wasabi">Wasabi</span>
+            <span>Wasabi Hot Cloud Storage</span>
+        </div>
+
+        <!-- EU-WEST-1 -->
+        <div class="card in-progress">
+            <div class="header">
+                <a href="https://status.wasabi.com/incidents/fbt09gbw0h13" target="_blank" class="title">Maintenance Activity Advisory for EU-WEST-1</a>
+                <span class="badge bg-in-progress">In progress</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：EU-West-1 (London)</span>
+                <span class="bucket-code">eu-west-1 / wb-uk-gvcloud</span>
+            </div>
+            <div class="date">發布時間：Mon, 14 Sep 2026 00:00:07 UTC</div>
+            <div class="content">
+                <p><strong>In progress</strong> - Scheduled maintenance is currently in progress. We will provide updates as necessary.</p>
+                <p><strong>Scheduled</strong> - We will be conducting essential system work in EU-WEST-1 (London) from Monday, September 14, 2026, through Friday, September 18, 2026.</p>
+            </div>
+        </div>
+
+        <!-- US-EAST-1 Maintenance -->
+        <div class="card completed">
+            <div class="header">
+                <a href="https://status.wasabi.com/incidents/d4rwz59xnvcc" target="_blank" class="title">Maintenance Activity Advisory for US-EAST-1</a>
+                <span class="badge bg-completed">Completed</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：US-East-1 (N. Virginia)</span>
+                <span class="bucket-code">us-east-1 / wb-us-gvcloud</span>
+            </div>
+            <div class="date">發布時間：Thu, 10 Sep 2026 22:03:54 UTC</div>
+            <div class="content">
+                <p><strong>Completed</strong> - The scheduled maintenance has been completed.</p>
+                <p>Conducting essential system work in US-EAST-1 from August 31 to September 11, 2026.</p>
+            </div>
+        </div>
+
+        <!-- EU-CENTRAL-2 Maintenance -->
+        <div class="card completed">
+            <div class="header">
+                <a href="https://status.wasabi.com/incidents/gt9mt3mnz2y7" target="_blank" class="title">Maintenance Activity Advisory for EU-CENTRAL Region</a>
+                <span class="badge bg-completed">Completed</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：EU-Central-2 (Frankfurt)</span>
+                <span class="bucket-code">eu-central-2 / wb-eu-gvcloud</span>
+            </div>
+            <div class="date">發布時間：Wed, 26 Aug 2026 20:00:07 UTC</div>
+            <div class="content">
+                <p><strong>Completed</strong> - Network maintenance in EU-CENTRAL region router upgrade completed.</p>
+            </div>
+        </div>
+
+        <!-- US-EAST-1 Incident -->
+        <div class="card resolved">
+            <div class="header">
+                <a href="https://status.wasabi.com/incidents/gpnpp3zqbk2v" target="_blank" class="title">System Errors in US-EAST-1</a>
+                <span class="badge bg-resolved">Resolved</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：US-East-1 (N. Virginia)</span>
+                <span class="bucket-code">us-east-1 / wb-us-gvcloud</span>
+            </div>
+            <div class="date">發布時間：Wed, 26 Aug 2026 02:37:12 UTC</div>
+            <div class="content">
+                <p><strong>Resolved</strong> - Elevated latency/errors on storage PUT requests due to backend infrastructure issue has been resolved.</p>
+            </div>
+        </div>
+
+        <!-- AP-SOUTHEAST-1 Maintenance -->
+        <div class="card completed">
+            <div class="header">
+                <a href="https://status.wasabi.com/incidents/pqqmqsrv26yx" target="_blank" class="title">Maintenance Activity Advisory for AP-SOUTHEAST-1</a>
+                <span class="badge bg-completed">Completed</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：AP-Southeast-1 (Singapore)</span>
+                <span class="bucket-code">ap-southeast-1 / wb-sg-gvcloud</span>
+            </div>
+            <div class="date">發布時間：Sat, 22 Aug 2026 00:00:08 UTC</div>
+            <div class="content">
+                <p><strong>Completed</strong> - Essential system work in AP-SOUTHEAST-1 (Singapore) completed.</p>
+            </div>
+        </div>
+
+        <!-- EU-CENTRAL-2 Incident -->
+        <div class="card resolved">
+            <div class="header">
+                <a href="https://status.wasabi.com/incidents/k1kxkmbtpjrf" target="_blank" class="title">System Errors in EU-CENTRAL-2</a>
+                <span class="badge bg-resolved">Resolved</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：EU-Central-2 (Frankfurt)</span>
+                <span class="bucket-code">eu-central-2 / wb-eu-gvcloud</span>
+            </div>
+            <div class="date">發布時間：Tue, 04 Aug 2026 07:30:00 UTC</div>
+            <div class="content">
+                <p><strong>Resolved</strong> - S3 services in Frankfurt (eu-central-2) were unavailable briefly due to a software update. Update was rolled back and services restored.</p>
+            </div>
+        </div>
+
+        <!-- AP-SOUTHEAST-1 Console Incident -->
+        <div class="card resolved">
+            <div class="header">
+                <a href="https://status.wasabi.com/incidents/ls5d9gdd513m" target="_blank" class="title">Intermittent Wasabi Console Access - Singapore (ap-southeast-1)</a>
+                <span class="badge bg-resolved">Resolved</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：AP-Southeast-1 (Singapore)</span>
+                <span class="bucket-code">ap-southeast-1 / wb-sg-gvcloud</span>
+            </div>
+            <div class="date">發布時間：Wed, 15 Jul 2026 19:00:00 UTC</div>
+            <div class="content">
+                <p><strong>Resolved</strong> - Console access issues resolved after rolling back DNS routing changes.</p>
+            </div>
+        </div>
+
+        <!-- AWS SECTION -->
+        <div class="section-header">
+            <span class="provider-tag tag-aws">AWS</span>
+            <span>Amazon Simple Storage Service (Amazon S3)</span>
+        </div>
+
+        <!-- AWS Frankfurt -->
+        <div class="card normal">
+            <div class="header">
+                <a href="https://status.aws.amazon.com/" target="_blank" class="title">Amazon Simple Storage Service (Frankfurt)</a>
+                <span class="badge bg-normal">Normal</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：Europe (Frankfurt)</span>
+                <span class="bucket-code">eu-central-1 / eu-gvcloud-data</span>
+            </div>
+            <div class="date">同步時間：Mon, 14 Sep 2026 01:33:21 PDT</div>
+            <div class="content">
+                <p><strong>Service is operating normally</strong> - No active incidents or scheduled maintenance reported in RSS feed.</p>
+            </div>
+        </div>
+
+        <!-- AWS N. California -->
+        <div class="card normal">
+            <div class="header">
+                <a href="https://status.aws.amazon.com/" target="_blank" class="title">Amazon Simple Storage Service (N. California)</a>
+                <span class="badge bg-normal">Normal</span>
+            </div>
+            <div class="meta-info">
+                <span>對應站點：US West (N. California)</span>
+                <span class="bucket-code">us-west-1 / uvs-gvcloud-data</span>
+            </div>
+            <div class="date">同步時間：Mon, 14 Sep 2026 01:32:21 PDT</div>
+            <div class="content">
+                <p><strong>Service is operating normally</strong> - No active incidents or scheduled maintenance reported in RSS feed.</p>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
